@@ -8,7 +8,6 @@ SoftwareSerial bluetooth(2, 3);  // RX, TX
  
 LiquidCrystal lcd(RS, E, D4, D5, D6, D7);
 
-
 const byte defaultMatrices[64] = {
   0b11111, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, //0, 0
   0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, //1, 0
@@ -21,7 +20,6 @@ const byte defaultMatrices[64] = {
 };
 
 //INSERT 11111,00000,00000,00000,00000,00000,00000,00000,11111,00000,00000,00000,00000,00000,00000,00000,11111,00000,00000,00000,00000,00000,00000,00000,11111,00000,00000,00000,00000,00000,00000,00000,11111,00000,00000,00000,00000,00000,00000,00000,11111,00000,00000,00000,00000,00000,00000,00000,11111,00000,00000,00000,00000,00000,00000,00000,11111,00000,00000,00000,00000,00000,00000,00000
-
 
 byte allMatrices[64]; // Almacena los datos de los caracteres personalizados
 
@@ -49,56 +47,59 @@ void setup() {
   }
 
   Serial.begin(9600); // Inicializa la comunicación serial
+  bluetooth.begin(9600);
 }
-void updateCustomCharacters() {
-  String input = Serial.readStringUntil('\n');
-  if (input.startsWith("INSERT ")) {
-    input = input.substring(7); // Elimina la palabra "INSERT" y un espacio
-    input.trim();
-    //Serial.println("HOLA");
 
-    // Divide la entrada en valores separados por comas
-    String values[64];
-    int count = 0;
-    int startPos = 0;
-    int endPos = 0;
+String input = "";
+void updateCustomCharacters(String str) {
 
-    // Extrae los valores separados por comas
-    while ((endPos = input.indexOf(',', startPos)) != -1) {
-      //Serial.print(input.substring(startPos, endPos) + " ");
-      values[count] = input.substring(startPos, endPos);
-      startPos = endPos + 1;
-      count++;
-    }
 
-    // Convierte los valores en bytes y almacénalos en allMatrices
-    for (int i = 0; i < count && i < 64; i++) {
-     //Serial.print(atoi(values[i].c_str()));
+  // input = str.remove(str.length() - 3, 3);    
+  // Divide la entrada en valores separados por comas
+  
+char *token = strtok(const_cast<char *>(str.c_str()), ",");
+int index = 0;
 
-      allMatrices[i] = strtol(values[i].c_str(), NULL, 2);
-      //allMatrices[i] = atoi(values[i].c_str());
-    }
+while (token != NULL) {
+  allMatrices[index] = (byte)strtol(token, NULL, 2);
+  token = strtok(NULL, ",");
+  index++;
+}
 
-    // Actualiza los caracteres personalizados en la pantalla
-    lcd.clear();
-    for (int i = 0; i < 8; i++) {
-      lcd.createChar(i, allMatrices + i * 8);
-    }
+  // Actualiza los caracteres personalizados en la pantalla
+  lcd.clear();
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, allMatrices + i * 8);
+  }
 
-    // Imprime los caracteres personalizados en la pantalla
-    lcd.setCursor(6, 0);  // Fila 0, columna 5
-    for (int i = 0; i < 4; i++) {
-      lcd.write(i);
-    }
+  // Imprime los caracteres personalizados en la pantalla
+  lcd.setCursor(6, 0);  // Fila 0, columna 5
+  for (int i = 0; i < 4; i++) {
+    lcd.write(i);
+  }
 
-    lcd.setCursor(6, 1);  // Fila 1, columna 5
-    for (int i = 4; i < 8; i++) {
-      lcd.write(i);
+  lcd.setCursor(6, 1);  // Fila 1, columna 5
+  for (int i = 4; i < 8; i++) {
+    lcd.write(i);
+  }
+  
+}
+
+String receivedString = "";  // Declara una cadena para almacenar los caracteres recibidos
+
+void loop() {
+  if (bluetooth.available()) {
+    char c = bluetooth.read();
+    if (c != '\n') {
+      // Si el carácter no es un salto de línea, agrégalo a la cadena
+      receivedString += c;
+    } else {
+      // Si se recibe un salto de línea, se considera el final de la palabra
+      // Serial.println("Palabra recibida: " + receivedString);
+      updateCustomCharacters(receivedString);
+      receivedString = "";  // Reinicia la cadena para la próxima palabra
+      
     }
   }
-}
-void loop() {
-  updateCustomCharacters();
   
-  // Tu código de loop aquí
 }
